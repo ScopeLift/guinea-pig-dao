@@ -2,7 +2,11 @@
   evm_version = "paris"
   optimizer = true
   optimizer_runs = 10_000_000
-  solc_version = "0.8.20"
+  remappings = [
+    "@openzeppelin/contracts/=lib/flexible-voting/lib/openzeppelin-contracts/contracts",
+    "flexible-voting/=lib/flexible-voting/src",
+  ]
+  solc_version = "0.8.22"
   verbosity = 3
 
 [profile.ci]
