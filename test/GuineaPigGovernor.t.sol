@@ -2,9 +2,30 @@
 pragma solidity 0.8.22;
 
 import {Test, console2} from "forge-std/Test.sol";
+import {GuineaPigGovernor, IVotes, TimelockController} from "src/GuineaPigGovernor.sol";
 
 contract GuineaPigGovernorTest is Test {
-  function setUp() public {}
+  GuineaPigGovernor governor;
+
+  IVotes token = IVotes(address(0x01b));
+  TimelockController timelock = TimelockController(payable(address(0x01c)));
+
+  uint256 INITIAL_VOTING_DELAY = 50;
+  uint256 INITIAL_VOTING_PERIOD = 7200;
+  uint256 INITIAL_PROPOSAL_THRESHOLD = 100_000e18;
+
+  function setUp() public {
+    governor =
+    new GuineaPigGovernor(token, INITIAL_VOTING_DELAY, INITIAL_VOTING_PERIOD, INITIAL_PROPOSAL_THRESHOLD, timelock);
+  }
 }
 
-contract Deployment is GuineaPigGovernorTest {}
+contract Constructor is GuineaPigGovernorTest {
+  function test_ConstructorArgumentsSetCorrectly() public {
+    assertEq(governor.votingDelay(), INITIAL_VOTING_DELAY);
+    assertEq(governor.votingPeriod(), INITIAL_VOTING_PERIOD);
+    assertEq(governor.proposalThreshold(), INITIAL_PROPOSAL_THRESHOLD);
+    assertEq(governor.timelock(), address(timelock));
+    assertEq(address(governor.token()), address(token));
+  }
+}

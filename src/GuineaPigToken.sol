@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {
-  ERC20Votes,
-  ERC20Permit,
-  ERC20
-} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {ERC20Votes, ERC20Permit, ERC20} from "@openzeppelin/token/ERC20/extensions/ERC20Votes.sol";
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
