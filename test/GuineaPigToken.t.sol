@@ -55,6 +55,7 @@ contract Constructor is GuineaPigTokenTest {
   }
 
   function testFuzz_DeployerCanGrantDefaultAdminRole(address _admin) public {
+    vm.assume(_admin != deployer);
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     assertEq(gpdToken.getRoleMember(DEFAULT_ADMIN_ROLE, 1), _admin);
   }
