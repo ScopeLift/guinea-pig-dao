@@ -5,7 +5,7 @@ import {Test, console2} from "forge-std/Test.sol";
 import {GuineaPigToken} from "src/GuineaPigToken.sol";
 
 contract GuineaPigTokenTest is Test {
-  address deployer = address(0xde470);
+  address admin = address(0xde470);
   GuineaPigToken gpdToken;
 
   // For convenience, we pull these off the token after deployment
@@ -16,10 +16,10 @@ contract GuineaPigTokenTest is Test {
   bytes32 BURNER_ADMIN_ROLE;
 
   function setUp() public {
-    vm.label(deployer, "Deployer");
+    vm.label(admin, "Admin");
 
-    vm.prank(deployer);
-    gpdToken = new GuineaPigToken();
+    vm.prank(admin);
+    gpdToken = new GuineaPigToken(admin);
 
     vm.label(address(gpdToken), "GPDT");
 
@@ -35,13 +35,13 @@ contract GuineaPigTokenTest is Test {
   }
 
   function _grantRole(bytes32 _role, address _to) public {
-    vm.prank(deployer);
+    vm.prank(admin);
     gpdToken.grantRole(_role, _to);
     assertTrue(gpdToken.hasRole(_role, _to), "Failure to grant role");
   }
 
   function _revokeRole(bytes32 _role, address _from) public {
-    vm.prank(deployer);
+    vm.prank(admin);
     gpdToken.revokeRole(_role, _from);
     assertFalse(gpdToken.hasRole(_role, _from), "Failure to revoke role");
   }
@@ -51,11 +51,11 @@ contract Constructor is GuineaPigTokenTest {
   function test_ConstructedCorrectly() public {
     assertEq(gpdToken.name(), "Guinea Pig DAO Token");
     assertEq(gpdToken.symbol(), "GPDT");
-    assertEq(gpdToken.getRoleMember(gpdToken.DEFAULT_ADMIN_ROLE(), 0), deployer);
+    assertEq(gpdToken.getRoleMember(gpdToken.DEFAULT_ADMIN_ROLE(), 0), admin);
   }
 
   function testFuzz_DeployerCanGrantDefaultAdminRole(address _admin) public {
-    vm.assume(_admin != deployer);
+    vm.assume(_admin != admin);
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     assertEq(gpdToken.getRoleMember(DEFAULT_ADMIN_ROLE, 1), _admin);
   }
@@ -68,7 +68,7 @@ contract Mint is GuineaPigTokenTest {
   }
 
   function testFuzz_DeployerCanGrantMinterAdminRole(address _minterAdmin) public {
-    vm.assume(_minterAdmin != deployer);
+    vm.assume(_minterAdmin != admin);
     _grantRole(MINTER_ADMIN_ROLE, _minterAdmin);
     assertEq(gpdToken.getRoleMember(MINTER_ADMIN_ROLE, 1), _minterAdmin);
   }
@@ -165,17 +165,17 @@ contract Mint is GuineaPigTokenTest {
 
 contract Burn is GuineaPigTokenTest {
   function _makeDeployerMinter() public {
-    vm.prank(deployer);
-    gpdToken.grantRole(MINTER_ROLE, deployer);
+    vm.prank(admin);
+    gpdToken.grantRole(MINTER_ROLE, admin);
   }
 
   function _mint(address _to, uint256 _amount) public {
     _assumeSafeReceiver(_to);
     uint256 _initialBalance = gpdToken.balanceOf(_to);
 
-    if (!gpdToken.hasRole(MINTER_ROLE, deployer)) _makeDeployerMinter();
+    if (!gpdToken.hasRole(MINTER_ROLE, admin)) _makeDeployerMinter();
 
-    vm.prank(deployer);
+    vm.prank(admin);
     gpdToken.mint(_to, _amount);
 
     assertEq(gpdToken.balanceOf(_to) - _amount, _initialBalance, "Mint failed in Burn tests");
@@ -187,7 +187,7 @@ contract Burn is GuineaPigTokenTest {
   }
 
   function testFuzz_DeployerCanGrantBurnerAdminRole(address _burnerAdmin) public {
-    vm.assume(_burnerAdmin != deployer);
+    vm.assume(_burnerAdmin != admin);
     _grantRole(BURNER_ADMIN_ROLE, _burnerAdmin);
     assertEq(gpdToken.getRoleMember(BURNER_ADMIN_ROLE, 1), _burnerAdmin);
   }
