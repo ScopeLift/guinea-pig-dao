@@ -6,6 +6,8 @@ import {GuineaPigToken} from "src/GuineaPigToken.sol";
 
 contract GuineaPigTokenTest is Test {
   address admin = address(0xde470);
+  address initialMintReceiver = address(0xacebeef);
+  uint256 initialMintAmount = 100e18;
   GuineaPigToken gpdToken;
 
   // For convenience, we pull these off the token after deployment
@@ -15,11 +17,15 @@ contract GuineaPigTokenTest is Test {
   bytes32 MINTER_ADMIN_ROLE;
   bytes32 BURNER_ADMIN_ROLE;
 
+  // Used in bound statements to avoid reverts for minting too many ERC20Votes
+  uint256 MAX_MINT_AMOUNT = type(uint128).max;
+
   function setUp() public {
     vm.label(admin, "Admin");
+    vm.label(initialMintReceiver, "Initial Mint Receiver");
 
     vm.prank(admin);
-    gpdToken = new GuineaPigToken(admin);
+    gpdToken = new GuineaPigToken(admin, initialMintReceiver, initialMintAmount);
 
     vm.label(address(gpdToken), "GPDT");
 
@@ -30,8 +36,8 @@ contract GuineaPigTokenTest is Test {
     BURNER_ADMIN_ROLE = gpdToken.BURNER_ADMIN_ROLE();
   }
 
-  function _assumeSafeReceiver(address _receiver) public pure {
-    vm.assume(_receiver != address(0));
+  function _assumeSafeReceiver(address _receiver) public view {
+    vm.assume(_receiver != address(0) && _receiver != initialMintReceiver);
   }
 
   function _grantRole(bytes32 _role, address _to) public {
@@ -52,6 +58,17 @@ contract Constructor is GuineaPigTokenTest {
     assertEq(gpdToken.name(), "Guinea Pig DAO Token");
     assertEq(gpdToken.symbol(), "GPDT");
     assertEq(gpdToken.getRoleMember(gpdToken.DEFAULT_ADMIN_ROLE(), 0), admin);
+    assertEq(gpdToken.balanceOf(initialMintReceiver), initialMintAmount);
+    assertEq(gpdToken.totalSupply(), initialMintAmount);
+  }
+
+  function testFuzz_MintsTokensOnDeployment(address _to, uint256 _amount) public {
+    _assumeSafeReceiver(_to);
+    _amount = bound(_amount, 0, MAX_MINT_AMOUNT);
+    GuineaPigToken _token = new GuineaPigToken(admin, _to, _amount);
+
+    assertEq(_token.balanceOf(_to), _amount);
+    assertEq(_token.totalSupply(), _amount);
   }
 
   function testFuzz_DeployerCanGrantDefaultAdminRole(address _admin) public {
@@ -77,7 +94,7 @@ contract Mint is GuineaPigTokenTest {
     public
   {
     _assumeSafeReceiver(_receiver);
-    _amount = bound(_amount, 0, type(uint224).max); // To avoid max supply check in ERC20Votes
+    _amount = bound(_amount, 0, MAX_MINT_AMOUNT); // To avoid max supply check in ERC20Votes
     _grantRole(MINTER_ROLE, _minter);
 
     vm.prank(_minter);
@@ -97,8 +114,8 @@ contract Mint is GuineaPigTokenTest {
     _assumeSafeReceiver(_receiver1);
     _assumeSafeReceiver(_receiver2);
     vm.assume(_receiver1 != _receiver2);
-    _amount1 = bound(_amount1, 0, type(uint224).max / 2 - 1);
-    _amount2 = bound(_amount2, 0, type(uint224).max / 2 - 1);
+    _amount1 = bound(_amount1, 0, MAX_MINT_AMOUNT);
+    _amount2 = bound(_amount2, 0, MAX_MINT_AMOUNT);
 
     _grantRole(MINTER_ROLE, _minter1);
     _grantRole(MINTER_ROLE, _minter2);
@@ -121,7 +138,7 @@ contract Mint is GuineaPigTokenTest {
   ) public {
     _assumeSafeReceiver(_receiver);
     vm.assume(_minter1 != _minter2);
-    _amount = bound(_amount, 0, type(uint224).max);
+    _amount = bound(_amount, 0, MAX_MINT_AMOUNT);
     _grantRole(MINTER_ROLE, _minter1);
     _grantRole(MINTER_ROLE, _minter2);
 
@@ -147,7 +164,7 @@ contract Mint is GuineaPigTokenTest {
     uint256 _amount
   ) public {
     _assumeSafeReceiver(_receiver);
-    _amount = bound(_amount, 0, type(uint224).max);
+    _amount = bound(_amount, 0, MAX_MINT_AMOUNT);
     _grantRole(MINTER_ADMIN_ROLE, _minterAdmin);
 
     vm.prank(_minterAdmin);
@@ -198,7 +215,7 @@ contract Burn is GuineaPigTokenTest {
     uint256 _mintAmount,
     uint256 _burnAmount
   ) public {
-    _mintAmount = bound(_mintAmount, 0, type(uint224).max);
+    _mintAmount = bound(_mintAmount, 0, MAX_MINT_AMOUNT);
     _burnAmount = bound(_burnAmount, 0, _mintAmount);
     _mint(_receiver, _mintAmount);
     _grantRole(BURNER_ROLE, _burner);
@@ -217,7 +234,7 @@ contract Burn is GuineaPigTokenTest {
     uint256 _burnAmount1,
     uint256 _burnAmount2
   ) public {
-    _mintAmount = bound(_mintAmount, 0, type(uint224).max);
+    _mintAmount = bound(_mintAmount, 0, MAX_MINT_AMOUNT);
     _burnAmount1 = bound(_burnAmount1, 0, _mintAmount);
     _burnAmount2 = bound(_burnAmount2, 0, _mintAmount - _burnAmount1);
     _mint(_receiver, _mintAmount);
@@ -243,7 +260,7 @@ contract Burn is GuineaPigTokenTest {
     uint256 _burnAmount2
   ) public {
     vm.assume(_burner1 != _burner2);
-    _mintAmount = bound(_mintAmount, 0, type(uint224).max);
+    _mintAmount = bound(_mintAmount, 0, MAX_MINT_AMOUNT);
     _burnAmount1 = bound(_burnAmount1, 0, _mintAmount);
     _burnAmount2 = bound(_burnAmount2, 0, _mintAmount - _burnAmount1);
     _mint(_receiver, _mintAmount);
@@ -269,7 +286,7 @@ contract Burn is GuineaPigTokenTest {
     uint256 _mintAmount,
     uint256 _burnAmount
   ) public {
-    _mintAmount = bound(_mintAmount, 0, type(uint224).max);
+    _mintAmount = bound(_mintAmount, 0, MAX_MINT_AMOUNT);
     _burnAmount = bound(_burnAmount, 0, _mintAmount);
     _mint(_receiver, _mintAmount);
     _grantRole(BURNER_ADMIN_ROLE, _burnerAdmin);

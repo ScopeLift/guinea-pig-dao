@@ -12,10 +12,11 @@ contract GuineaPigToken is ERC20Votes, AccessControlEnumerable {
   bytes32 public constant MINTER_ADMIN_ROLE = keccak256("MINTER_ADMIN_ROLE");
   bytes32 public constant BURNER_ADMIN_ROLE = keccak256("BURNER_ADMIN_ROLE");
 
-  constructor(address _admin)
+  constructor(address _admin, address _to, uint256 _amount)
     ERC20("Guinea Pig DAO Token", "GPDT")
     ERC20Permit("Guinea Pig DAO Token")
   {
+    _mint(_to, _amount);
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(MINTER_ADMIN_ROLE, _admin);
     _grantRole(BURNER_ADMIN_ROLE, _admin);
