@@ -119,10 +119,8 @@ contract ProposalTest is GuineaPigDaoLaunchIntegrationTest {
             keccak256(bytes(_description))
         );
     }
-}
 
-contract MintProposal is ProposalTest {
-    function _passProposalToGrantTimelockMinterRole() public {
+    function _passProposalToGrantTimelockRole(bytes32 _role) public {
         address[] memory _targets = new address[](1);
         _targets[0] = address(token);
 
@@ -130,7 +128,7 @@ contract MintProposal is ProposalTest {
         _values[0] = 0;
 
         bytes[] memory _calldatas = new bytes[](1);
-        _calldatas[0] = _buildProposalData("grantRole(bytes32,address)", abi.encode(token.MINTER_ROLE(), address(timelock)));
+        _calldatas[0] = _buildProposalData("grantRole(bytes32,address)", abi.encode(_role, address(timelock)));
 
         _queueVoteAndExecuteProposal(
             _targets,
@@ -139,6 +137,14 @@ contract MintProposal is ProposalTest {
             "Grant timelock Minter role",
             SUPPORT_FOR
         );
+    }
+
+    function _passProposalToGrantTimelockMinterRole() public {
+        _passProposalToGrantTimelockRole(token.MINTER_ROLE());
+    }
+
+    function _passProposalToGrantTimelockBurnerRole() public {
+        _passProposalToGrantTimelockRole(token.BURNER_ROLE());
     }
 
     function _passProposalToMintTokens(address _to, uint256 _amount) public returns (uint256) {
@@ -166,6 +172,30 @@ contract MintProposal is ProposalTest {
         return _amount;
     }
 
+    function _passProposalToBurnTokens(address _from, uint256 _amount) public {
+        require(token.hasRole(token.BURNER_ROLE(), address(timelock)), "Test process error: grant minter role before minting");
+        require(token.balanceOf(_from) >= _amount, "Test error: asking to burn more than held");
+
+        address[] memory _targets = new address[](1);
+        _targets[0] = address(token);
+
+        uint256[] memory _values = new uint256[](1);
+        _values[0] = 0;
+
+        bytes[] memory _calldatas = new bytes[](1);
+        _calldatas[0] = _buildProposalData("burn(address,uint256)", abi.encode(_from, _amount));
+
+        _queueVoteAndExecuteProposal(
+            _targets,
+            _values,
+            _calldatas,
+            "Burn tokens",
+            SUPPORT_FOR
+        );
+    }
+}
+
+contract MintProposal is ProposalTest {
     function test_GrantMinterRoleToTimelockProposal() public {
         _passProposalToGrantTimelockMinterRole();
         assertTrue(token.hasRole(token.MINTER_ROLE(), address(timelock)));
@@ -205,5 +235,34 @@ contract MintProposal is ProposalTest {
 
         assertEq(token.balanceOf(_to), _amount);
         assertEq(token.totalSupply(), INITIAL_MINT_AMOUNT + _amount);
+    }
+}
+
+contract BurnProposal is ProposalTest {
+    function test_GrantBurnerRoleToTimelockProposal() public {
+        _passProposalToGrantTimelockBurnerRole();
+        assertTrue(token.hasRole(token.BURNER_ROLE(), address(timelock)));
+    }
+
+    function testFuzz_BurnTokensProposal(address _holder, uint256 _sendAmount, uint256 _burnAmount) public {
+        _assumeSafeReceiver(_holder);
+        _sendAmount = bound(_sendAmount, 0, INITIAL_MINT_AMOUNT);
+        _burnAmount = bound(_burnAmount, 0, _sendAmount);
+
+        // send tokens to the holder
+        vm.prank(INITIAL_MINT_RECEIVER);
+        token.transfer(_holder, _sendAmount);
+        assertEq(token.balanceOf(_holder), _sendAmount);
+
+        // have the holder delegate to our delegatee to ensure passed proposal
+        vm.prank(_holder);
+        token.delegate(delegatee);
+
+        // burn some of the holder's tokens via governance
+        _passProposalToGrantTimelockBurnerRole();
+        _passProposalToBurnTokens(_holder, _burnAmount);
+
+        assertEq(token.balanceOf(_holder), _sendAmount - _burnAmount);
+        assertEq(token.totalSupply(), INITIAL_MINT_AMOUNT - _burnAmount);
     }
 }
