@@ -53,6 +53,9 @@ contract ProposalTest is GuineaPigDaoLaunchIntegrationTest {
 
   uint256 MAX_MINT_AMOUNT = type(uint128).max;
 
+  uint8 PROPOSAL_STATE_DEFEATED = 3;
+  uint8 PROPOSAL_STATE_SUCCEEDED = 4;
+
   function setUp() public virtual override {
     super.setUp();
     vm.label(delegatee, "Delegate");
@@ -248,8 +251,6 @@ contract BurnProposal is ProposalTest {
 }
 
 contract FailedProposal is ProposalTest {
-  uint8 PROPOSAL_STATE_DEFEATED = 3;
-
   function testFuzz_FailsAProposalThatDoesNotPass(address _againstVoter, uint256 _againstVoteAmount)
     public
   {
@@ -302,4 +303,60 @@ contract FailedProposal is ProposalTest {
   }
 }
 
-contract FlexibleVoting is ProposalTest {}
+contract FlexibleVoting is ProposalTest {
+  function testFuzz_AllowsForFlexibleVoting(
+    uint256 _forVotes,
+    uint256 _againstVotes,
+    uint256 _abstainVotes
+  ) public {
+    _forVotes = bound(_forVotes, 0, INITIAL_MINT_AMOUNT);
+    _againstVotes = bound(_againstVotes, 0, INITIAL_MINT_AMOUNT - _forVotes);
+    _abstainVotes = bound(_abstainVotes, 0, INITIAL_MINT_AMOUNT - _forVotes - _againstVotes);
+
+    // the proposal would make the delegatee the token's admin
+    address[] memory _targets = new address[](1);
+    _targets[0] = address(token);
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = 0;
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = _buildProposalData(
+      "grantRole(bytes32,address)", abi.encode(token.DEFAULT_ADMIN_ROLE, address(delegatee))
+    );
+    string memory _description = "This proposal adds a new admin to the token";
+
+    // submit the proposal
+    vm.prank(delegatee);
+    uint256 _proposalId = governor.propose(_targets, _values, _calldatas, _description);
+
+    // advance past the voting delay
+    vm.roll(block.number + INITIAL_VOTING_DELAY + 1);
+
+    // cast fractionalized vote
+    bytes memory _fractionalizedVotes =
+      abi.encodePacked(uint128(_againstVotes), uint128(_forVotes), uint128(_abstainVotes));
+
+    vm.prank(delegatee);
+    governor.castVoteWithReasonAndParams(
+      _proposalId,
+      0,
+      "This is my vote, there are many like it, but this one is mine.",
+      _fractionalizedVotes
+    );
+
+    (uint256 _actualAgainstVotes, uint256 _actualForVotes, uint256 _actualAbstainVotes) =
+      governor.proposalVotes(_proposalId);
+
+    assertEq(_forVotes, _actualForVotes);
+    assertEq(_againstVotes, _actualAgainstVotes);
+    assertEq(_abstainVotes, _actualAbstainVotes);
+
+    // jump past the voting period
+    vm.roll(block.number + INITIAL_VOTING_PERIOD + 1);
+
+    // ensure result is as expected
+    bool _isVoteSuccessful = (_forVotes > _againstVotes)
+      && ((_forVotes + _abstainVotes) > governor.quorum(block.number - 1));
+    uint8 _expectedState = _isVoteSuccessful ? PROPOSAL_STATE_SUCCEEDED : PROPOSAL_STATE_DEFEATED;
+    assertEq(uint8(governor.state(_proposalId)), _expectedState);
+  }
+}
