@@ -246,3 +246,60 @@ contract BurnProposal is ProposalTest {
     assertEq(token.totalSupply(), INITIAL_MINT_AMOUNT - _burnAmount);
   }
 }
+
+contract FailedProposal is ProposalTest {
+  uint8 PROPOSAL_STATE_DEFEATED = 3;
+
+  function testFuzz_FailsAProposalThatDoesNotPass(address _againstVoter, uint256 _againstVoteAmount)
+    public
+  {
+    _assumeSafeReceiver(_againstVoter);
+    // ensure the amount that will vote against is greater than the amount that will vote for
+    _againstVoteAmount =
+      bound(_againstVoteAmount, (INITIAL_MINT_AMOUNT / 2) + 1, INITIAL_MINT_AMOUNT - 1);
+
+    // send majority of tokens to new voter
+    vm.prank(INITIAL_MINT_RECEIVER);
+    token.transfer(_againstVoter, _againstVoteAmount);
+
+    // the new voter delegates to themselves
+    vm.prank(_againstVoter);
+    token.delegate(_againstVoter);
+
+    // advance blocks for check pointing
+    vm.roll(block.number + 1);
+
+    // the proposal would make the delegatee the token's admin
+    address[] memory _targets = new address[](1);
+    _targets[0] = address(token);
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = 0;
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = _buildProposalData(
+      "grantRole(bytes32,address)", abi.encode(token.DEFAULT_ADMIN_ROLE, address(delegatee))
+    );
+    string memory _description = "This proposal adds a new admin to the token";
+
+    // submit the proposal
+    vm.prank(_againstVoter);
+    uint256 _proposalId = governor.propose(_targets, _values, _calldatas, _description);
+
+    // advance past the voting delay
+    vm.roll(block.number + INITIAL_VOTING_DELAY + 1);
+
+    // both cast votes
+    vm.prank(delegatee);
+    governor.castVote(_proposalId, SUPPORT_FOR);
+    vm.prank(_againstVoter);
+    governor.castVote(_proposalId, SUPPORT_AGAINST);
+
+    // jump past the voting period
+    vm.roll(block.number + INITIAL_VOTING_PERIOD + 1);
+
+    assertEq(uint8(governor.state(_proposalId)), PROPOSAL_STATE_DEFEATED);
+    vm.expectRevert("Governor: proposal not successful");
+    governor.queue(_targets, _values, _calldatas, keccak256(bytes(_description)));
+  }
+}
+
+contract FlexibleVoting is ProposalTest {}
