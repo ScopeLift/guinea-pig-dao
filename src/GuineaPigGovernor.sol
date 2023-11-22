@@ -14,7 +14,6 @@ import {GovernorVotesQuorumFraction} from
 import {GovernorPreventLateQuorum} from
   "@openzeppelin/governance/extensions/GovernorPreventLateQuorum.sol";
 import {IVotes} from "@openzeppelin/governance/utils/IVotes.sol";
-// TODO: convert to interface?
 import {TimelockController} from "@openzeppelin/governance/TimelockController.sol";
 
 contract GuineaPigGovernor is
