@@ -8,7 +8,6 @@ import {GuineaPigToken} from "src/GuineaPigToken.sol";
 import {GuineaPigGovernor} from "src/GuineaPigGovernor.sol";
 import {DeployLaunchConstants} from "script/DeployLaunchConstants.sol";
 
-// TODO: rename to something more specific, launch deploy, initial deploy
 contract DeployLaunch is DeployLaunchConstants, Script {
   address deployer;
 
