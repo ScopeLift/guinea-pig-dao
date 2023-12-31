@@ -11,8 +11,6 @@ import {GovernorTimelockControl} from
 import {GovernorSettings} from "@openzeppelin/governance/extensions/GovernorSettings.sol";
 import {GovernorVotesQuorumFraction} from
   "@openzeppelin/governance/extensions/GovernorVotesQuorumFraction.sol";
-import {GovernorPreventLateQuorum} from
-  "@openzeppelin/governance/extensions/GovernorPreventLateQuorum.sol";
 import {IVotes} from "@openzeppelin/governance/utils/IVotes.sol";
 import {TimelockController} from "@openzeppelin/governance/TimelockController.sol";
 
@@ -21,8 +19,7 @@ contract GuineaPigGovernor is
   GovernorVotes,
   GovernorTimelockControl,
   GovernorSettings,
-  GovernorVotesQuorumFraction,
-  GovernorPreventLateQuorum
+  GovernorVotesQuorumFraction
 {
   /// @notice Human readable name of this Governor.
   string private constant GOVERNOR_NAME = "Guinea Pig DAO Governor v1";
@@ -40,7 +37,6 @@ contract GuineaPigGovernor is
     GovernorSettings(_initialVotingDelay, _initialVotingPeriod, _initialProposalThreshold)
     GovernorTimelockControl(_timelock)
     GovernorVotesQuorumFraction(INITIAL_QUORUM_PERCENTAGE_BIPS)
-    GovernorPreventLateQuorum(10)
     Governor(GOVERNOR_NAME)
   {}
 
@@ -94,28 +90,6 @@ contract GuineaPigGovernor is
 
   function quorumDenominator() public pure override returns (uint256) {
     return BIP;
-  }
-
-  /// @dev We override this function to resolve ambiguity between inherited contracts.
-  function proposalDeadline(uint256 proposalId)
-    public
-    view
-    virtual
-    override(IGovernor, Governor, GovernorPreventLateQuorum)
-    returns (uint256)
-  {
-    return GovernorPreventLateQuorum.proposalDeadline(proposalId);
-  }
-
-  /// @dev We override this function to resolve ambiguity between inherited contracts.
-  function _castVote(
-    uint256 proposalId,
-    address account,
-    uint8 support,
-    string memory reason,
-    bytes memory params
-  ) internal virtual override(Governor, GovernorPreventLateQuorum) returns (uint256) {
-    return GovernorPreventLateQuorum._castVote(proposalId, account, support, reason, params);
   }
 
   /// @dev We override this function to resolve ambiguity between inherited contracts.
