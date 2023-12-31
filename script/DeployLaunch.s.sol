@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // slither-disable-start reentrancy-benign
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {Script} from "forge-std/Script.sol";
 import {TimelockController} from "@openzeppelin/governance/TimelockController.sol";

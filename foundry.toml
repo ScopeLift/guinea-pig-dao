@@ -1,12 +1,12 @@
 [profile.default]
-  evm_version = "paris"
+  evm_version = "shanghai"
   optimizer = true
   optimizer_runs = 14_000
   remappings = [
     "@openzeppelin/=lib/flexible-voting/lib/openzeppelin-contracts/contracts",
     "flexible-voting/=lib/flexible-voting/src",
   ]
-  solc_version = "0.8.22"
+  solc_version = "0.8.23"
   verbosity = 3
 
 [profile.ci]

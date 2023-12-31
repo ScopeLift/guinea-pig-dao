@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // slither-disable-start reentrancy-benign
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 contract DeployLaunchConstants {
   uint256 INITIAL_VOTING_DELAY = 25; // 5 minutes given 12 second blocks
