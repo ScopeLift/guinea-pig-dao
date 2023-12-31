@@ -27,21 +27,12 @@ contract DeployLaunch is DeployLaunchConstants, Script {
     _executors[0] = address(0x0);
 
     vm.startBroadcast(deployer);
-    _timelock = new TimelockController(
-      TIMELOCK_MIN_DELAY,
-      _proposers,
-      _executors,
-      deployer
-    );
+    _timelock = new TimelockController(TIMELOCK_MIN_DELAY, _proposers, _executors, deployer);
 
     _token = new GuineaPigToken(address(_timelock), INITIAL_MINT_RECEIVER, INITIAL_MINT_AMOUNT);
 
     _governor = new GuineaPigGovernor(
-      _token,
-      INITIAL_VOTING_DELAY,
-      INITIAL_VOTING_PERIOD,
-      INITIAL_PROPOSAL_THRESHOLD,
-      _timelock
+      _token, INITIAL_VOTING_DELAY, INITIAL_VOTING_PERIOD, INITIAL_PROPOSAL_THRESHOLD, _timelock
     );
 
     // Give the Governor the roles it needs to execute & cancel proposals
