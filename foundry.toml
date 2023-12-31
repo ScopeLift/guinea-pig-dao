@@ -1,7 +1,7 @@
 [profile.default]
   evm_version = "paris"
   optimizer = true
-  optimizer_runs = 10_000_000
+  optimizer_runs = 14_000
   remappings = [
     "@openzeppelin/=lib/flexible-voting/lib/openzeppelin-contracts/contracts",
     "flexible-voting/=lib/flexible-voting/src",
