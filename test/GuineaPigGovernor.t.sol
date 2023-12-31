@@ -16,21 +16,12 @@ contract GuineaPigGovernorTest is Test {
   uint256 INITIAL_PROPOSAL_THRESHOLD = 100_000e18;
 
   function setUp() public {
-    timelock = new TimelockController(
-      100,
-       new address[](0),
-       new address[](0),
-      address(this)
-    );
+    timelock = new TimelockController(100, new address[](0), new address[](0), address(this));
 
     token = new GuineaPigToken(address(timelock), address(0xcafe), 100e18);
 
     governor = new GuineaPigGovernor(
-      token,
-      INITIAL_VOTING_DELAY,
-      INITIAL_VOTING_PERIOD,
-      INITIAL_PROPOSAL_THRESHOLD,
-      timelock
+      token, INITIAL_VOTING_DELAY, INITIAL_VOTING_PERIOD, INITIAL_PROPOSAL_THRESHOLD, timelock
     );
   }
 }
